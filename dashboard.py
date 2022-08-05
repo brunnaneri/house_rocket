@@ -462,10 +462,6 @@ def recomendation_venda(result):
     st.subheader('Summer & Spring')
     st.write(df_summer)
     lucro_total = '$' + str(round(df_summer['Lucro'].sum()))
-
-    with open('style.css') as f:
-	st.markdown(f'<style>{f.read()}</style>',unsafe_allow_html=True)
-
     st.metric('Total Profit', lucro_total)
 
     st.subheader('Winter & Fall')
