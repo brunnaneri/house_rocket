@@ -1,31 +1,68 @@
-import pandas as pd
-import numpy as np
-import streamlit as st
 import folium
-from streamlit_folium import folium_static
-from folium.plugins import MarkerCluster
 import geopandas
-import plotly.express as px
-from datetime import datetime
 
-st.set_page_config( layout='wide' )
-@st.cache(allow_output_mutation = True)
+import numpy             as np
+import pandas            as pd
+import seaborn           as sns
+import streamlit         as st
+import plotly.express    as px
+import matplotlib.pyplot as plt
+
+from PIL              import Image
+from datetime         import datetime
+from folium.plugins   import MarkerCluster
+from streamlit_folium import folium_static
+
+st.set_page_config(layout='centered')
+
+
+@st.cache(allow_output_mutation=True)
 def get_data(path):
     data = pd.read_csv(path)
-    #data['date'] = pd.to_datetime(data['date']).dt.strftime( '%Y-%m-%d' )
+    # data['date'] = pd.to_datetime(data['date']).dt.strftime( '%Y-%m-%d' )
     return data
 
-@st.cache(allow_output_mutation= True)
+
+@st.cache(allow_output_mutation=True)
 def get_geofile(url):
     geofile = geopandas.read_file(url)
     return geofile
+
 
 def set_feature(data):
     data['price_m2'] = data['price'] / data['sqft_lot']
     return data
 
 def overview_data(data):
+    #OVERALL INFORMATION
+    title_format = '<p style="font-family:sans-serif;' \
+                'font-size: 50px;' \
+                'font-weight: bold;' \
+                'text-align: center;' \
+                '"</p> House Rocket Company</p>'
+    st.markdown(title_format, unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: black;'>Welcome to House Rocket Data Report</h3>",
+                unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: grey;'>General Information </h2>", unsafe_allow_html=True)
+    with st.expander("Click to see overall information"):
+        st.markdown("<h2 style='text-align: center; color: black;'>Profit Overview </h2>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Profit", '679M', "18%")
+        c2.metric("Total Invested", '3.67B')
+        c3.metric("Total returned", '4.35B')
+
+        st.markdown("<h2 style='text-align: center; color: black;'>Overall Information </h2>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center; color: grey;'>Total Available Properties: 21,598 </h3>",
+                    unsafe_allow_html=True)
+        st.markdown(
+            "<h3 style='text-align: center; color: grey;'>Total Recommended Properties for Purchase: 10,579 </h3>",
+            unsafe_allow_html=True)
+    # - OVERVIEW DATA - START
     data['date'] = pd.to_datetime(data['date']).dt.strftime('%Y-%m-%d')
+    # Filters
+    image = Image.open('arte.png')
+    st.sidebar.image(image, caption='House Rocket Company')
+    st.sidebar.header('Region and Features Options')
     # by_zipcode
     regions_zip = st.sidebar.multiselect('Choose the region',
                                          data['zipcode'].unique())
@@ -34,7 +71,7 @@ def overview_data(data):
     regions_feature = st.sidebar.multiselect('Choose the feature',
                                              data.columns)
     # data
-    st.subheader('DataSet Overview')
+    st.markdown("<h2 style='text-align: center; color: grey;'>DataSet Overview </h2>", unsafe_allow_html=True)
 
     # Conditonal to filter
     if (regions_zip != []) & (regions_feature != []):
@@ -46,10 +83,12 @@ def overview_data(data):
     else:
         data = data.copy()
 
-    st.write(data)
+    with st.expander("See DataSet"):
+        st.write(data)
 
     # average analysis
-    st.subheader('Average Analysis')
+    st.markdown("<h2 style='text-align: center; color: grey;'>Average Analysis per ZipCode </h2>",
+                unsafe_allow_html=True)
     # Número total de imóveis por código postal
     number_houses = data[['id', 'zipcode']].groupby('zipcode').count().reset_index()
     df1 = pd.DataFrame(number_houses)
@@ -78,14 +117,20 @@ def overview_data(data):
     df6.columns = ['Zipcode', 'Number of Houses', 'Avg Price', 'Avg Living', 'Price/m2 ']
 
     # Writing the Data Frame
-    st.write(df6)
+    with st.expander("See Average Analysis"):
+        st.write(df6)
 
-    # descriptive analysis
-    st.subheader('Descriptive Analysis')
+    # DESCRIPTIVE ANALYSIS
+    st.markdown("<h2 style='text-align: center; color: grey;'>Descriptive Analysis </h2>", unsafe_allow_html=True)
+
+    # Price
+
+    with open('style.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
     # Para cada coluna que seja numérica, fazer: max, min, mediana, média, std
-
-    num_attributes = data.select_dtypes(include=[np.number])
-
+    st.subheader('Descriptive Statistics')
+    num_attributes = data[['price', 'price_m2', 'sqft_living', 'sqft_basement', 'sqft_above']]
     media = pd.DataFrame(num_attributes.apply(np.mean))
     mediana = pd.DataFrame(num_attributes.apply(np.median))
     std = pd.DataFrame(num_attributes.apply(np.std))
@@ -94,18 +139,180 @@ def overview_data(data):
 
     result = pd.concat([media, mediana, std, max_, min_], ignore_index=True, axis=1)
     result.columns = ['Media', 'Mediana', 'std', 'Max', 'Min']
-    result = result.drop(labels='id',axis = 0)
-    st.write(result)
+    result = result.T.reset_index().rename(columns={'index': "metrics"})
+    result_write = result.copy().drop('price', axis=1)
+    st.write(result_write)
+
+    st.subheader('Univariate Analysis')
+    # PRICE
+    a1, a2, a3 = st.columns(3)
+    a1.metric("", 'Price')
+    a2.metric("Mean", round(result.loc[0, 'price'], 2))
+    a3.metric("Median", round(result.loc[1, 'price'], 2))
+    # Row B
+    b1, b2, b3 = st.columns(3)
+    b1.metric('Std', round(result.loc[2, 'price'], 2))
+    b2.metric("Max", round(result.loc[3, 'price'], 2))
+    b3.metric("Min", round(result.loc[4, 'price'], 2))
+
+    # HISTOGRAMA - PRICE
+    st.markdown("<h3 style='text-align: center; color: grey;'>Price Distribution </h3>", unsafe_allow_html=True)
+    st.sidebar.header("House Attributes")
+    st.sidebar.subheader('Select to see Price Distribution')
+    # filters
+    min_price = int(data['price'].min())
+    max_price = int(data['price'].max())
+    # data filtering
+    f_price = st.sidebar.slider('Price', min_price, max_price, max_price)
+    df = data.loc[data['price'] <= f_price]
+    # data plot
+    fig = px.histogram(df, x='price', nbins=50)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # CountPlot - view, condition, zipcode
+    # Filter
+    aux = data[['view', 'condition', 'zipcode']]
+    st.markdown("<h4 style='text-align: center; color: grey;'>Select a Feature to see its distribution </h4>", unsafe_allow_html=True)
+    count_filter = st.selectbox('', aux.columns)
+    if count_filter != []:
+        fig = plt.figure(figsize=(10, 4))
+        sns.countplot(x=count_filter, data=aux)
+        st.pyplot(fig)
+    else:
+        fig = plt.figure(figsize=(10, 4))
+        sns.countplot(x='condition', data=aux)
+        st.pyplot(fig)
+
+    # HistPlot - yr_built
+    st.markdown("<h3 style='text-align: center; color: grey;'>Histogram - Year Built </h3>", unsafe_allow_html=True)
+
+    fig = plt.figure(figsize=(15, 10))
+    sns.histplot(x='yr_built', data=data)
+    st.pyplot(fig)
 
     return None
 
-def portfolio_density(data,geofile):
-    # Mapas com densidade de portifólio e de preço - Por Zipcode
 
+def attributes_distribution(data):
+    # Distribuição por categorias físicas
+
+    st.markdown("<h3 style='text-align: center; color: grey;'>House Attributes Distribution </h3>", unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+
+    # House per bedrooms
+    #Filter
+    st.sidebar.subheader('Houses per bedroom')
+
+    # Get nd array unique bedrooms list
+    unique_bedrooms = data['bedrooms'].unique()
+
+    # Converts nd array to dict, and then to list to pass to index of selectbox:
+    unique_bedrooms_list = list(dict(enumerate(unique_bedrooms.flatten(), 0)))
+
+    # index sorted by the last key of dictionary (grater number)
+    f_bedrooms = st.sidebar.selectbox('Max Number of Bedrooms', sorted(set(data['bedrooms'].unique())),
+                                      index=list(unique_bedrooms_list).index(unique_bedrooms_list[-1]))
+
+    #Plot
+    c1.subheader('House per bedrooms')
+    df =  data[data['bedrooms'] <= f_bedrooms]
+    fig = px.histogram(df, x='bedrooms', nbins=19)
+    c1.plotly_chart(fig, use_container_width=True)
+
+    # House per bathrooms
+    #Filter
+    st.sidebar.subheader('Houses per Bathroom')
+
+    # Get nd array unique bathrooms list
+    unique_bathrooms = data['bathrooms'].unique()
+
+    # Converts nd array to dict, and then to list to pass to index of selectbox:
+    unique_bathrooms_list = list(dict(enumerate(unique_bathrooms.flatten(), 0)))
+
+    # index sorted by the last key of dictionary (grater number)
+    f_bathrooms = st.sidebar.selectbox('Max Number of Bathrooms', sorted(set(data['bathrooms'].unique())),
+
+                                           index=list(unique_bathrooms_list).index(unique_bathrooms_list[-1]))
+    #Plot
+    c2.subheader('House per bathrooms')
+    df = data['bathrooms']
+    fig = px.histogram(df, x='bathrooms', nbins=19)
+    c2.plotly_chart(fig, use_container_width=True)
+    c1, c2 = st.columns(2)
+
+    # Houses per floor
+    # Filter
+    st.sidebar.subheader('Houses per Floor')
+
+    # Get nd array unique bathrooms list
+    unique_floors = data['floors'].unique()
+
+    # Converts nd array to dict, and then to list to pass to index of selectbox:
+    unique_floors_list = list(dict(enumerate(unique_floors.flatten(), 0)))
+
+    # index sorted by the last key of dictionary (grater number)
+    f_floors = st.sidebar.selectbox('Max Number of Floors', sorted(set(data['floors'].unique())),
+                                    index=list(unique_floors_list).index(unique_floors_list[-1]))
+    #Plot
+    c1.subheader('House per floors')
+    df = data['floors']
+    fig = px.histogram(df, x='floors', nbins=19)
+    c1.plotly_chart(fig, use_container_width=True)
+
+    # Houses with waterview
+    # Filter
+    st.sidebar.subheader('Waterview')
+    f_waterview = st.sidebar.checkbox('Only Houses with Waterview')
+
+    if f_waterview:
+        df = data[data['waterfront'] == 1]
+    else:
+        df = data.copy()
+    #Plot
+    c2.subheader('House with waterview')
+    fig = px.histogram(data, x='waterfront', nbins=10)
+    c2.plotly_chart(fig, use_container_width=True)
+
+    return None
+
+def commercial_analysis(data):
+    st.header('Bivariate Analysis')
+    st.markdown("<h4 style='text-align: center; color: grey;'>Filter a feature to see its Boxplot </h4>", unsafe_allow_html=True)
+    # BOXPLOTS using Plotly
+    # Filter
+    aux = data[['bedrooms', 'floors', 'view', 'condition', 'waterfront', 'price']]
+    box_filter = st.selectbox('', aux.columns)
+
+    if box_filter != []:
+        fig = plt.figure(figsize=(10, 4))
+        sns.boxplot(x=box_filter, y='price', data=aux)
+        st.pyplot(fig)
+    else:
+        fig = plt.figure(figsize=(10, 4))
+        sns.boxplot(x='bedrooms', y='price', data=aux)
+        st.pyplot(fig)
+
+    # Average Price per Year built
+    st.markdown("<h3 style='text-align: center; color: grey;'>Average Price per Year built </h3>", unsafe_allow_html=True)
+    # Gráfico 1 - Average price per year
+    df = data.loc[data['yr_built']]  # < f_year_built]
+    df = df[['price', 'yr_built']].groupby('yr_built').mean().reset_index()
+    # plot
+    fig1 = px.line(df, x='yr_built', y='price')
+    st.plotly_chart(fig1, use_container_width=True)
+
+    return None
+
+
+def portfolio_density(data, geofile):
+    # Mapas com densidade de portifólio e de preço - Por Zipcode
     # MAP 1 - Density Map
-    st.title('Region Overview')
+    st.markdown("<h2 style='text-align: center; color: grey;'>Region Overview </h2>", unsafe_allow_html=True)
     c1, c2 = st.columns((1, 1))
-    c1.header('Portifolio Density')
+    c3, c4 = st.columns((1, 1))
+    c1.subheader('Portifolio Density')
+    map1 = c3.checkbox('See Portifolio Density Map', )
     # Base Map - Folium
     density_map = folium.Map(location=[data['lat'].mean(), data['long'].mean()],
                              # width = 400,
@@ -124,11 +331,13 @@ def portfolio_density(data,geofile):
                         row['bedrooms'],
                         row['bathrooms'],
                         row['yr_built'])).add_to(marker_cluster)
-    with c1:
-        folium_static(density_map)
+    if map1:
+        with c1:
+            folium_static(density_map)
 
     # MAP 2 - Price Map
-    c2.header('Price Density')
+    c2.subheader('Price Density')
+    map2 = c4.checkbox('See Price Density Map')
     df = data[['price', 'zipcode']].groupby('zipcode').mean().reset_index()
     df.columns = ['ZIP', 'PRICE']
     # Base Map - Folium
@@ -146,158 +355,68 @@ def portfolio_density(data,geofile):
                          fill_opacity=0.7,
                          line_opacity=0.2,
                          legend_name='AVG PRICE')
-    with c2:
-        folium_static(price_map)
+    if map2:
+        with c2:
+            folium_static(price_map)
 
     return None
-
-def commercial_distribution(data):
-    # Distribuição por categorias comerciais
-    st.sidebar.title('Commercial Options')
-    st.title('Commercial Attributes')
-    st.header('Average Price per Year built')
-    # Gráfico 1 - Average price per year
-    # Filters
-    min_year_built = int(data['yr_built'].min())
-    max_year_built = int(data['yr_built'].max())
-    st.sidebar.subheader('Select Max Year Built')
-    f_year_built = st.sidebar.slider('Year_built', min_year_built,
-                                     max_year_built,
-                                     min_year_built)
-    # data selection
-    df = data.loc[data['yr_built'] < f_year_built]
-    df = df[['price', 'yr_built']].groupby('yr_built').mean().reset_index()
-    # plot
-    fig1 = px.line(df, x='yr_built', y='price')
-    st.plotly_chart(fig1, use_container_width=True)
-
-    st.header('Average Price per Day')
-    # Gráfico 2 - Average price per day
-    # Filters
-    data['date'] = pd.to_datetime(data['date']).dt.strftime('%Y-%m-%d')
-    min_day_built = datetime.strptime(data['date'].min(), '%Y-%m-%d')
-    max_day_built = datetime.strptime(data['date'].max(), '%Y-%m-%d')
-    st.sidebar.subheader('Select Max Date')
-    f_day_built = st.sidebar.slider('Date', min_day_built,
-                                    max_day_built,
-                                    min_day_built)
-    # data selection
-    data['date'] = pd.to_datetime(data['date'])
-    df = data.loc[data['date'] < f_day_built]
-    df = df[['price', 'date']].groupby('date').mean().reset_index()
-    # plot
-    fig2 = px.line(df, x='date', y='price')
-    st.plotly_chart(fig2, use_container_width=True)
-
-    # HISTOGRAMAS
-    st.header('Price Distribution')
-    st.sidebar.subheader('Select Max Price')
-    # filters
-    min_price = int(data['price'].min())
-    max_price = int(data['price'].max())
-    avg_price = int(data['price'].mean())
-    # data filtering
-    f_price = st.sidebar.slider('Price', min_price, max_price, avg_price)
-    df = data.loc[data['price'] < f_price]
-    # data plot
-    fig = px.histogram(df, x='price', nbins=50)
-    st.plotly_chart(fig, use_container_width=True)
-
-    return None
-
-def attributes_distribution(data):
-    # Distribuição por categorias físicas
-    st.sidebar.title('Attributes Options')
-    st.title('House Attributes')
-
-    # filters
-    f_bedrooms = st.sidebar.selectbox('Max number of Bedrooms',
-                                      sorted(set(data['bedrooms'].unique())))
-    f_bathrooms = st.sidebar.selectbox('Max number of bathrooms',
-                                       sorted(set(data['bathrooms'].unique())))
-    c1, c2 = st.columns(2)
-
-    # House per bedrooms
-    c1.header('House per bedrooms')
-    df = data[data['bedrooms'] < f_bedrooms]
-    fig = px.histogram(df, x='bedrooms', nbins=19)
-    c1.plotly_chart(fig, use_container_width=True)
-
-    # House per bathrooms
-    c2.header('House per bathrooms')
-    df = data[data['bathrooms'] < f_bathrooms]
-    fig = px.histogram(df, x='bathrooms', nbins=19)
-    c2.plotly_chart(fig, use_container_width=True)
-
-    # filters
-    f_floors = st.sidebar.selectbox('Select number of floor',
-                                    sorted(set(data['floors'].unique())))
-
-    f_waterview = st.sidebar.checkbox('Only houses with waterview')
-
-    c1, c2 = st.columns(2)
-
-    # Houses per floor
-    c1.header('House per floors')
-    df = data[data['floors'] < f_floors]
-    fig = px.histogram(df, x='floors', nbins=19)
-    c1.plotly_chart(fig, use_container_width=True)
-
-    # Houses with waterview
-    c2.header('House with waterview')
-    if f_waterview:
-        df = data[data['waterfront'] == 1]
-    else:
-        df = data.copy()
-
-    fig = px.histogram(df, x='waterfront', nbins=10)
-    c2.plotly_chart(fig, use_container_width=True)
-
-    return None
-
 
 
 def recomendation_compra(data):
     # Recomendação de compra
+    st.markdown("<h2 style='text-align: center; color: grey;'> Business Recommendations </h2>", unsafe_allow_html=True)
     st.subheader('Buy Recommendation')
     price_by_region = data[['zipcode', 'price']].groupby('zipcode').median()
     price_by_region = pd.DataFrame(price_by_region)
     price_by_region = price_by_region.rename(columns={'price': 'mediana'})
-    recomendation = pd.DataFrame(data[['id','date','zipcode', 'condition', 'price']])
+    recomendation = pd.DataFrame(data[['id', 'date', 'zipcode', 'condition', 'price']])
     result = pd.merge(recomendation, price_by_region, how="inner", on=["zipcode", "zipcode"])
 
     for i in range(len(result)):
 
         if (result.loc[i, 'condition'] >= 3) & (result.loc[i, 'price'] < result.loc[i, 'mediana']):
-             result.loc[i, 'status'] = 'Comprar'
+            result.loc[i, 'status'] = 'Comprar'
 
         else:
             result.loc[i, 'status'] = 'Não Comprar'
 
     result_2 = result.copy()
-    result_2 = result_2.drop(labels='date',axis = 1)
-    st.write(result_2)
+    result_2 = result_2.drop(labels='date', axis=1)
+    only_buy = st.checkbox('Only Houses to Buy')
+    if only_buy:
+        aux = result_2.loc[result_2['status'] == 'Comprar']
+        st.write(aux)
+    else:
+        st.write(result_2)
     return result
 
+
 def recomendation_venda(result):
-    #Recomendação de venda
+    # Recomendação de venda
     st.subheader('Sell Recommendation')
+    result['date'] = pd.to_datetime(result['date'])
     result['month'] = result['date'].dt.month
     new_result = result.loc[result['status'] == 'Comprar']
     df_result = pd.DataFrame(new_result)
     df_result['season'] = 'NA'
 
+    df_result.loc[df_result['month'] == 9, 'season'] = 'fall'
+    df_result.loc[df_result['month'] == 10, 'season'] = 'fall'
+    df_result.loc[df_result['month'] == 11, 'season'] = 'fall'
+    df_result.loc[df_result['month'] == 12, 'season'] = 'winter'
     df_result.loc[df_result['month'] == 1, 'season'] = 'winter'
     df_result.loc[df_result['month'] == 2, 'season'] = 'winter'
-    df_result.loc[df_result['month'] == 12, 'season'] = 'winter'
 
+    df_result.loc[df_result['month'] == 6, 'season'] = 'summer'
     df_result.loc[df_result['month'] == 7, 'season'] = 'summer'
     df_result.loc[df_result['month'] == 8, 'season'] = 'summer'
-    df_result.loc[df_result['month'] == 9, 'season'] = 'summer'
+    df_result.loc[df_result['month'] == 3, 'season'] = 'spring'
+    df_result.loc[df_result['month'] == 4, 'season'] = 'spring'
+    df_result.loc[df_result['month'] == 5, 'season'] = 'spring'
 
-    df_result_summer = df_result.loc[df_result['season'] == 'summer']
+    df_result_summer = df_result.loc[(df_result['season'] == 'summer') | (df_result['season'] == 'spring')]
+    df_result_winter = df_result.loc[(df_result['season'] == 'winter') | (df_result['season'] == 'fall')]
 
-    df_result_winter = df_result.loc[df_result['season'] == 'winter']
 
     # SUMMER
     median_summer = df_result_summer[['zipcode', 'price']].groupby('zipcode').median()
@@ -307,7 +426,7 @@ def recomendation_venda(result):
 
     # WINTER
     median_winter = df_result_winter[['zipcode', 'price']].groupby('zipcode').median()
-    df2_result_winter = df_result_winter[['id', 'zipcode','price', 'season', 'condition']]
+    df2_result_winter = df_result_winter[['id', 'zipcode', 'price', 'season', 'condition']]
     df_winter = pd.merge(median_winter, df2_result_winter, how='inner', on=['zipcode', 'zipcode'])
     df_winter = df_winter.rename(columns={'price_x': 'median_winter', 'price_y': 'purchase_price'})
 
@@ -337,45 +456,45 @@ def recomendation_venda(result):
 
     # Winter
     for i in range(len(df_winter)):
-        df_winter.loc[i, 'Lucro'] = df_summer.loc[i, 'sell_price'] - df_summer.loc[i, 'purchase_price']
+        df_winter.loc[i, 'Lucro'] = df_winter.loc[i, 'sell_price'] - df_winter.loc[i, 'purchase_price']
 
-    # Recomendation - SUMMER & WINTER
-
-    st.subheader('Summer')
+    #Recomendation - SUMMER & WINTER
+    st.subheader('Summer & Spring')
     st.write(df_summer)
+    lucro_total = '$' + str(round(df_summer['Lucro'].sum()))
+    st.metric('Total Profit', lucro_total)
 
-    st.subheader('Winter')
+    st.subheader('Winter & Fall')
     st.write(df_winter)
+    lucro_total = '$' + str(round(df_winter['Lucro'].sum()))
+    st.metric('Total Profit', lucro_total)
+
+    #Meus dados
+    st.write(" \n\n"
+             "by **Brunna Neri**"
+             " \n\n"
+             "More details: "
+             "[GitHub](https://github.com/brunnaneri)"
+             " \n\n"
+             "Contact: [LinkedIn](https://www.linkedin.com/in/brunna-neri-74928516a)")
 
     return None
 
 
-
 if __name__ == '__main__':
-    #ETL
+    # ETL
 
-    #Data extration
+    # Data extration
     path = 'Datasets/kc_house_data.csv'
     url = 'https://opendata.arcgis.com/datasets/83fc2e72903343aabff6de8cb445b81c_2.geojson'
-
     data = get_data(path)
     geofile = get_geofile(url)
 
-    #Transformation
-    # Title
-    st.title('House Rocket Company')
+    # Transformation
     data = set_feature(data)
     overview_data(data)
-    portfolio_density(data,geofile)
-    commercial_distribution(data)
     attributes_distribution(data)
+    commercial_analysis(data)
+    portfolio_density(data, geofile)
     result = recomendation_compra(data)
     recomendation_venda(result)
-
-
-
-
-
-
-
-
