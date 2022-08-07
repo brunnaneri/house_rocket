@@ -78,7 +78,8 @@ Consideração: Em todas propostas acionáveis, descrita como 'insight', busca-s
 ## 5.0 RESULTADOS PARA O NEGÓCIO
 
 ### 5.1 Produto disponibilizado para o time:
-COLOCAR OS ITENS DO DASHBOARD
+O dashboard disponibilizado para o time de negócio foi desenvolvido utilizando o pacote streamlit e hospedado na Cloud Heroku.
+O acesso se dá via o link: https://house-rocket-company-analysis.herokuapp.com/
 
 ### 5.2 Resultados Financeiros
 As recomendações de compra e venda foram feitas considerando os critérios de condições, região(zipcode) e estação do ano em que o imóvel ficou disponível. 
