@@ -79,6 +79,7 @@ Consideração: Em todas propostas acionáveis, descrita como 'insight', busca-s
 
 ### 5.1 Produto disponibilizado para o time:
 O dashboard disponibilizado para o time de negócio foi desenvolvido utilizando o pacote streamlit e hospedado na Cloud Heroku.
+
 O acesso se dá via o link: https://house-rocket-company-analysis.herokuapp.com/
 
 ### 5.2 Resultados Financeiros
