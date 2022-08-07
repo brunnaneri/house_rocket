@@ -4,7 +4,7 @@
 
 A House Rocket Company é uma empresa do ramo imobiliário que atua no meio digital adquirindo e revendendo imóveis por meio de sua plataforma online.
 
-bservação:
+Observação:
 Este projeto foi inspirado no desafio "House Sales Prediction" publicado no Kaggle (https://www.kaggle.com/harlfoxem/housesalesprediction). Por isso, trata-se de um problema fictício, no entanto solucionado com passos e análises de um projeto real.
 
 ## 1.0 PROBLEMA DE NEGÓCIO
