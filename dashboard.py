@@ -47,9 +47,9 @@ def overview_data(data):
     with st.expander("Click to see overall information"):
         st.markdown("<h2 style='text-align: center; color: black;'>Profit Overview </h2>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Profit", '679M', "18%")
-        c2.metric("Total Invested", '3.67B')
-        c3.metric("Total returned", '4.35B')
+        c1.metric("Total Profit", '757M', "18%")
+        c2.metric("Total Invested", '4.09B')
+        c3.metric("Total returned", '4.85B')
 
         st.markdown("<h2 style='text-align: center; color: black;'>Overall Information </h2>", unsafe_allow_html=True)
         st.markdown("<h3 style='text-align: center; color: grey;'>Total Available Properties: 21,598 </h3>",
